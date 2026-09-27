@@ -1,0 +1,4 @@
+# pnpm 配置文件（pnpm 10+ 的 pnpm 设置放在这里，package.json 中的 pnpm 字段已不再生效）
+# 允许 esbuild 执行安装脚本；否则 pnpm install 会以 ERR_PNPM_IGNORED_BUILDS 退出
+allowBuilds:
+  esbuild: true

@@ -1,0 +1,32 @@
+{
+  "name": "vless-sub-hub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "VLESS(WS+TLS+CDN) 多优选 IP 订阅生成与分享服务",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "dev:server": "node --watch server/index.js",
+    "dev:web": "vite --config web/vite.config.js",
+    "build": "vite build --config web/vite.config.js",
+    "start": "node server/index.js",
+    "hash": "node server/hash-password.js",
+    "dev": "node scripts/dev.mjs",
+    "verify": "node scripts/smoke-test.mjs",
+    "verify:auth": "node scripts/verify-auth.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "naive-ui": "^2.40.1",
+    "qrcode": "^1.5.4",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.10"
+  },
+  "packageManager": "pnpm@12.6.0"
+}
