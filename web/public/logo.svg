@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="VLESS 订阅中心">
+  <title>VLESS 订阅中心</title>
+  <!-- 透明底（无背景板），图形居中于方形画布 -->
+  <rect x="110" y="212" width="292" height="200" rx="40" fill="#7C3AED"/>
+  <rect x="240" y="260" width="122" height="24" rx="12" fill="#F5F3FF"/>
+  <rect x="240" y="312" width="86" height="24" rx="12" fill="#F5F3FF"/>
+  <!-- 箭头外描边：保证在浅色背景下仍然可辨 -->
+  <line x1="176" y1="336" x2="176" y2="142" stroke="#7C3AED" stroke-width="34" stroke-linecap="round"/>
+  <polygon points="176,100 224,160 128,160" fill="#7C3AED" stroke="#7C3AED" stroke-width="8" stroke-linejoin="round"/>
+  <!-- 箭头本体 -->
+  <line x1="176" y1="336" x2="176" y2="142" stroke="#F5F3FF" stroke-width="26" stroke-linecap="round"/>
+  <polygon points="176,100 224,160 128,160" fill="#F5F3FF"/>
+</svg>

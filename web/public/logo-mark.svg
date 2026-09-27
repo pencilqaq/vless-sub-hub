@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 340" width="320" height="340" role="img" aria-label="VLESS 订阅中心">
+  <title>VLESS 订阅中心（透明底，紧凑版）</title>
+  <rect x="14" y="126" width="292" height="200" rx="40" fill="#7C3AED"/>
+  <rect x="144" y="174" width="122" height="24" rx="12" fill="#F5F3FF"/>
+  <rect x="144" y="226" width="86" height="24" rx="12" fill="#F5F3FF"/>
+  <line x1="80" y1="250" x2="80" y2="56" stroke="#7C3AED" stroke-width="34" stroke-linecap="round"/>
+  <polygon points="80,14 128,74 32,74" fill="#7C3AED" stroke="#7C3AED" stroke-width="8" stroke-linejoin="round"/>
+  <line x1="80" y1="250" x2="80" y2="56" stroke="#F5F3FF" stroke-width="26" stroke-linecap="round"/>
+  <polygon points="80,14 128,74 32,74" fill="#F5F3FF"/>
+</svg>

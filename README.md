@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="web/public/logo.svg" width="104" alt="vless-sub-hub logo">
+</p>
+
 # VLESS 订阅中心（vless-sub-hub）
 
 > 自建 VLESS(WS+TLS+Cloudflare CDN) 优选 IP 订阅生成与分享服务 · Node + Vue3 + Naive UI
