@@ -1,5 +1,7 @@
 # VLESS 订阅中心（vless-sub-hub）
 
+> 自建 VLESS(WS+TLS+Cloudflare CDN) 优选 IP 订阅生成与分享服务 · Node + Vue3 + Naive UI
+
 把 3x-ui 导出的 VLESS(WS + TLS + Cloudflare CDN) 链接，按你测速得到的多个优选 IP 批量生成节点，
 并作为可公开分享的订阅地址提供给各类客户端（v2rayN / Shadowrocket / Clash / mihomo / sing-box 等）。
 

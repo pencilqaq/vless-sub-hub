@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "VLESS(WS+TLS+CDN) 多优选 IP 订阅生成与分享服务",
+  "description": "自建 VLESS(WS+TLS+Cloudflare CDN) 优选 IP 订阅生成与分享服务 · Node + Vue3 + Naive UI",
   "engines": {
     "node": ">=18.17"
   },
