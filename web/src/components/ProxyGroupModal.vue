@@ -98,7 +98,8 @@ watch(
       members: Array.isArray(source.members) && source.members.length ? source.members.slice() : [NODES_PLACEHOLDER],
       enabled: source.enabled !== false
     });
-  }
+  },
+  { immediate: true }
 );
 async function save() {
   if (!form.name.trim()) {

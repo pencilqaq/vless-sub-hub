@@ -195,7 +195,6 @@ function blank() {
     nameTemplate: DEFAULT_NAME_TEMPLATE,
     paramOverrides: '',
     clashMode: 'fragment',
-    clashPreset: 'custom',
     clashGroupIds: [],
     clashFinalGroup: '',
     clashCustomRules: '',
@@ -222,7 +221,6 @@ watch(
       nameTemplate: source.nameTemplate || DEFAULT_NAME_TEMPLATE,
       paramOverrides: source.paramOverrides || '',
       clashMode: source.clashMode === 'full' ? 'full' : 'fragment',
-      clashPreset: source.clashPreset || 'custom',
       clashGroupIds: Array.isArray(source.clashGroupIds) ? source.clashGroupIds.slice() : [],
       clashFinalGroup: source.clashFinalGroup || '',
       clashCustomRules: source.clashCustomRules || '',
@@ -232,7 +230,8 @@ watch(
       dedupe: source.dedupe !== false,
       enabled: source.enabled !== false
     });
-  }
+  },
+  { immediate: true }
 );
 const preview = computed(() => {
   const result = generateSubscription(form);
@@ -279,12 +278,6 @@ async function loadRuleSets() {
     ruleSetOptions.value = [];
   }
 }
-const presetOptions = [
-  { label: '基础分流（内置规则，不依赖外网）', value: 'basic' },
-  { label: 'Loyalsoldier/clash-rules（推荐）', value: 'loyalsoldier' },
-  { label: 'blackmatrix7/ios_rule_script（分类最细）', value: 'blackmatrix7' },
-  { label: '仅使用自定义规则', value: 'custom' }
-];
 const baseParams = computed(() => {
   try {
     const parsed = parseVless(form.baseLink);

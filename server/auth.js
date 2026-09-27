@@ -56,12 +56,7 @@ function safeEqualString(a, b) {
 }
 export function verifyCredentials(username, password) {
   const userOk = safeEqualString(String(username == null ? '' : username), config.username);
-  let passOk = false;
-  if (config.passwordHash) {
-    passOk = verifyPassword(password, config.passwordHash);
-  } else if (config.passwordPlain && config.allowPlain) {
-    passOk = safeEqualString(String(password == null ? '' : password), config.passwordPlain);
-  }
+  const passOk = config.passwordHash ? verifyPassword(password, config.passwordHash) : false;
   return userOk && passOk;
 }
 export function createToken() {

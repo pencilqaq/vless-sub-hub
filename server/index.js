@@ -50,9 +50,6 @@ function sanitizeBody(body) {
     nameTemplate: String(source.nameTemplate || '').slice(0, 200),
     paramOverrides: String(source.paramOverrides || '').slice(0, 4000),
     clashMode: String(source.clashMode || 'fragment') === 'full' ? 'full' : 'fragment',
-    clashPreset: ['basic', 'loyalsoldier', 'blackmatrix7', 'custom'].includes(String(source.clashPreset))
-      ? String(source.clashPreset)
-      : 'custom',
     clashCustomRules: String(source.clashCustomRules || '').slice(0, 8000),
     clashMixedPort: String(source.clashMixedPort || '7890').slice(0, 10),
     clashRuleSetIds: Array.isArray(source.clashRuleSetIds)
@@ -82,7 +79,6 @@ function toView(sub, req) {
     nameTemplate: sub.nameTemplate || '',
     paramOverrides: sub.paramOverrides || '',
     clashMode: sub.clashMode || 'fragment',
-    clashPreset: sub.clashPreset || 'basic',
     clashCustomRules: sub.clashCustomRules || '',
     clashMixedPort: sub.clashMixedPort || '7890',
     clashRuleSetIds: Array.isArray(sub.clashRuleSetIds) ? sub.clashRuleSetIds : [],
@@ -110,7 +106,6 @@ function renderFormat(sub, result, format) {
     const full = String((sub && sub.clashMode) || 'fragment') === 'full';
     const body = full
       ? toClashConfig(result.parsed, result.links, {
-          preset: (sub && sub.clashPreset) || 'custom',
           customRules: (sub && sub.clashCustomRules) || '',
           ruleSets: resolveRuleSets(sub),
           groups: resolveGroups(sub),
@@ -576,9 +571,6 @@ const server = app.listen(config.port, config.host, () => {
   if (!fs.existsSync(indexHtml)) {
     lines.push('  [提示] 前端尚未构建：生产模式请执行 pnpm run build');
   }
-  if (config.passwordPlain && !config.passwordHash) {
-    lines.push('  [警告] 正在使用明文 APP_PASSWORD，建议执行 pnpm run hash 改用 APP_PASSWORD_HASH');
-  }
   if (!config.cookieSecure) {
     lines.push('  [提示] COOKIE_SECURE=false：若通过 HTTPS 对外提供服务，建议设为 true');
   }
@@ -590,7 +582,7 @@ const server = app.listen(config.port, config.host, () => {
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {
     console.error('\n[启动失败] 端口 ' + config.port + ' 已被占用：可能已经有一个实例在运行。');
-    console.error('修改 .env 中的 PORT，或先停止占用该端口的进程后重试。\n');
+    console.error('修改 .env 中的 SERVER_PORT，或先停止占用该端口的进程后重试。\n');
     process.exit(1);
   }
   console.error('[启动失败]', err);

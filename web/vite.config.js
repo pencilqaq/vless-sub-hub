@@ -28,12 +28,8 @@ function pick(envValue, fileValue) {
 }
 const webPort = Number(pick(process.env.WEB_PORT, fileEnv.WEB_PORT) || 5173);
 function pickBackend(envObj, fileObj) {
-  for (const key of ['SERVER_PORT', 'SEVER_PORT', 'PORT']) {
-    if (envObj[key] !== undefined) return String(envObj[key]).trim();
-  }
-  for (const key of ['SERVER_PORT', 'SEVER_PORT', 'PORT']) {
-    if (fileObj[key] !== undefined) return String(fileObj[key]).trim();
-  }
+  if (envObj.SERVER_PORT !== undefined) return String(envObj.SERVER_PORT).trim();
+  if (fileObj.SERVER_PORT !== undefined) return String(fileObj.SERVER_PORT).trim();
   return '';
 }
 const explicitBackend = pick(process.env.BACKEND_PORT, undefined) || pickBackend(process.env, fileEnv);
@@ -57,6 +53,18 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/]node_modules[\\/](naive-ui|@css-render|seemly|vueuc|vdirs|treemate|date-fns)[\\/]/.test(id)) return 'vendor-naive';
+          if (/[\\/]node_modules[\\/](qrcode|dijkstrajs|encode-utf8)[\\/]/.test(id)) return 'vendor-qrcode';
+          if (/[\\/]node_modules[\\/](vue|vue-router|@vue)[\\/]/.test(id)) return 'vendor-vue';
+          return 'vendor';
+        }
+      }
+    }
   }
 });

@@ -123,8 +123,9 @@
         </n-spin>
       </n-tab-pane>
     </n-tabs>
-    <RuleSetModal v-model:show="modalVisible" :model="editing" :group-options="groupOptions" @saved="loadAll" />
+    <RuleSetModal v-if="modalVisible" v-model:show="modalVisible" :model="editing" :group-options="groupOptions" @saved="loadAll" />
     <ProxyGroupModal
+      v-if="groupModalVisible"
       v-model:show="groupModalVisible"
       :model="editingGroup"
       :group-names="groupNames"
@@ -152,7 +153,7 @@
   </div>
 </template>
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   NButton,
@@ -174,8 +175,8 @@ import {
   useMessage
 } from 'naive-ui';
 import { NODES_PLACEHOLDER, SPECIAL_PROXIES } from '@shared/clash-config.js';
-import RuleSetModal from '../components/RuleSetModal.vue';
-import ProxyGroupModal from '../components/ProxyGroupModal.vue';
+const RuleSetModal = defineAsyncComponent(() => import('../components/RuleSetModal.vue'));
+const ProxyGroupModal = defineAsyncComponent(() => import('../components/ProxyGroupModal.vue'));
 import { api } from '../api.js';
 import { doLogout, session } from '../session.js';
 const router = useRouter();

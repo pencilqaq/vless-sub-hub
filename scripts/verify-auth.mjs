@@ -34,9 +34,7 @@ const server = spawn(process.execPath, ['server/index.js'], {
     SERVER_PORT: '3998',
     HOST: '127.0.0.1',
     APP_USERNAME: 'hashuser',
-    APP_PASSWORD: '',
     APP_PASSWORD_HASH: hash,
-    ALLOW_PLAIN_PASSWORD: 'false',
     SESSION_SECRET: 'verify-auth-secret-0123456789-abcdefghijklmnop',
     DATA_DIR: dataDir,
     TRUST_PROXY: ''
@@ -92,7 +90,6 @@ const noCred = spawnSync(process.execPath, ['server/index.js'], {
     SERVER_PORT: '3997',
     HOST: '127.0.0.1',
     APP_USERNAME: 'admin',
-    APP_PASSWORD: '',
     APP_PASSWORD_HASH: '',
     DATA_DIR: noCredData
   })

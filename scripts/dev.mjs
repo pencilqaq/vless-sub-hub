@@ -4,7 +4,6 @@
  * 端口规则（.env）：
  *   WEB_PORT     前端端口，必填
  *   SERVER_PORT  后端端口，留空时自动取 WEB_PORT + 1
- *                （旧名 PORT 与拼写 SEVER_PORT 仍兼容，但会提示改名）
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -42,16 +41,6 @@ function pick(envValue, fileValue) {
 function isPort(value) {
   return /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
 }
-const BACKEND_KEYS = ['SERVER_PORT', 'SEVER_PORT', 'PORT'];
-function pickBackendPort(envObj, fileObj) {
-  for (const key of BACKEND_KEYS) {
-    if (envObj[key] !== undefined) return { key, value: pick(envObj[key], undefined) };
-  }
-  for (const key of BACKEND_KEYS) {
-    if (fileObj[key] !== undefined) return { key, value: pick(undefined, fileObj[key]) };
-  }
-  return { key: '', value: '' };
-}
 const rawWebPort = pick(process.env.WEB_PORT, fileEnv.WEB_PORT);
 if (!rawWebPort) {
   console.error('');
@@ -65,21 +54,12 @@ if (!isPort(rawWebPort)) {
   process.exit(1);
 }
 const webPort = Number(rawWebPort);
-const backendPick = pickBackendPort(process.env, fileEnv);
-if (backendPick.key === 'SEVER_PORT') {
-  console.warn('[warn] 检测到 SEVER_PORT，疑似拼写错误，建议改为 SERVER_PORT。');
-}
-if (backendPick.key === 'PORT') {
-  console.warn('[warn] PORT 已更名为 SERVER_PORT，建议更新 .env（当前仍兼容）。');
-}
-if (backendPick.key === 'SERVER_PORT' && (process.env.PORT !== undefined || fileEnv.PORT !== undefined)) {
-  console.warn('[warn] 同时存在 SERVER_PORT 与 PORT，已忽略 PORT。');
-}
-if (backendPick.value && !isPort(backendPick.value)) {
-  console.error('\n[配置错误] ' + backendPick.key + ' 不是合法端口：' + backendPick.value + '（留空表示使用 WEB_PORT + 1）\n');
+const rawServerPort = pick(process.env.SERVER_PORT, fileEnv.SERVER_PORT);
+if (rawServerPort && !isPort(rawServerPort)) {
+  console.error('\n[配置错误] SERVER_PORT 不是合法端口：' + rawServerPort + '（留空表示使用 WEB_PORT + 1）\n');
   process.exit(1);
 }
-const backendPort = backendPick.value ? Number(backendPick.value) : webPort + 1;
+const backendPort = rawServerPort ? Number(rawServerPort) : webPort + 1;
 if (backendPort === webPort) {
   console.error('\n[配置错误] 后端端口不能与前端端口相同（都是 ' + webPort + '）\n');
   process.exit(1);
@@ -92,8 +72,6 @@ const childEnv = Object.assign({}, fileEnv, process.env, {
   BACKEND_URL: backendUrl,
   WEB_PORT: String(webPort)
 });
-delete childEnv.PORT;
-delete childEnv.SEVER_PORT;
 const children = [];
 let shuttingDown = false;
 const HINTS = [
@@ -183,9 +161,7 @@ process.on('SIGTERM', () => shutdown(0));
 console.log('');
 console.log('启动开发环境：');
 console.log('  前端  http://localhost:' + webPort + '  （WEB_PORT）');
-const backendLabel = backendPick.value
-  ? '  （' + backendPick.key + '）'
-  : '  （未设置 SERVER_PORT，按 WEB_PORT + 1 推导）';
+const backendLabel = rawServerPort ? '  （SERVER_PORT）' : '  （未设置 SERVER_PORT，按 WEB_PORT + 1 推导）';
 console.log('  后端  http://localhost:' + backendPort + backendLabel + (backendHost === '0.0.0.0' ? '' : '，监听 ' + backendHost));
 console.log('  Vite 代理：/api、/sub → ' + backendUrl);
 console.log('按 Ctrl+C 可同时停止两个进程。');

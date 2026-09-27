@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hashPassword } from '../server/auth.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 3999;
 const BASE = 'http://127.0.0.1:' + PORT;
@@ -68,9 +69,7 @@ const server = spawn(process.execPath, ['server/index.js'], {
     SERVER_PORT: String(PORT),
     HOST: '127.0.0.1',
     APP_USERNAME: 'tester',
-    APP_PASSWORD: 'test-password-123',
-    APP_PASSWORD_HASH: '',
-    ALLOW_PLAIN_PASSWORD: 'true',
+    APP_PASSWORD_HASH: hashPassword('test-password-123'),
     SESSION_SECRET: 'smoke-test-secret-0123456789-abcdefghijklmnop',
     SESSION_TTL_HOURS: '1',
     DATA_DIR: dataDir,

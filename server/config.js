@@ -42,33 +42,23 @@ try {
 } catch (err) {
   console.warn('[config] 无法创建数据目录 ' + dataDir + '：' + err.message);
 }
-const BACKEND_PORT_KEYS = ['SERVER_PORT', 'SEVER_PORT', 'PORT'];
-function resolveBackendPort() {
-  for (const key of BACKEND_PORT_KEYS) {
-    if (process.env[key] === undefined) continue;
-    const raw = String(process.env[key]).trim();
-    if (!raw) return { key, value: 0 };
-    const value = Number(raw);
-    if (Number.isFinite(value) && value >= 1 && value <= 65535) return { key, value };
-    console.warn('[config] ' + key + ' 不是合法端口：' + raw);
-    return { key, value: 0 };
-  }
-  return { key: '', value: 0 };
+function readPort(name) {
+  const raw = String(process.env[name] || '').trim();
+  if (!raw) return 0;
+  const value = Number(raw);
+  if (Number.isFinite(value) && value >= 1 && value <= 65535) return value;
+  console.warn('[config] ' + name + ' 不是合法端口：' + raw);
+  return 0;
 }
-const backendPortEnv = resolveBackendPort();
-if (backendPortEnv.key === 'SEVER_PORT') console.warn('[config] 检测到 SEVER_PORT，疑似拼写错误，建议改为 SERVER_PORT。');
-if (backendPortEnv.key === 'PORT') console.warn('[config] PORT 已更名为 SERVER_PORT，建议更新 .env（当前仍兼容）。');
 const envWebPort = numEnv('WEB_PORT', 0);
+const explicitServerPort = readPort('SERVER_PORT');
 export const config = {
-  port: backendPortEnv.value || (envWebPort ? envWebPort + 1 : 3000),
-  portFromWebPort: !backendPortEnv.value && envWebPort > 0,
-  portKey: backendPortEnv.key,
+  port: explicitServerPort || (envWebPort ? envWebPort + 1 : 3000),
+  portFromWebPort: !explicitServerPort && envWebPort > 0,
   webPort: envWebPort,
   host: process.env.HOST || '0.0.0.0',
   username: process.env.APP_USERNAME || 'admin',
   passwordHash: String(process.env.APP_PASSWORD_HASH || '').trim(),
-  passwordPlain: String(process.env.APP_PASSWORD || ''),
-  allowPlain: boolEnv('ALLOW_PLAIN_PASSWORD', true),
   sessionTtlMs: numEnv('SESSION_TTL_HOURS', 168) * 3600 * 1000,
   sessionVersion: String(process.env.SESSION_VERSION || '1'),
   cookieSecure: boolEnv('COOKIE_SECURE', false),
@@ -111,14 +101,11 @@ export function getSessionSecret() {
 }
 export function validateConfig() {
   const problems = [];
-  if (!config.passwordHash && !config.passwordPlain) {
-    problems.push('未配置登录密码：请在 .env 中设置 APP_PASSWORD_HASH（推荐）或 APP_PASSWORD。');
+  if (!config.passwordHash) {
+    problems.push('未配置登录密码：请执行 pnpm hash "你的密码" 生成后把 APP_PASSWORD_HASH 写入 .env。');
   }
   if (config.passwordHash && !/^scrypt\$\d+\$\d+\$\d+\$/.test(config.passwordHash)) {
     problems.push('APP_PASSWORD_HASH 格式不正确，请执行 pnpm run hash "你的密码" 重新生成。');
-  }
-  if (!config.passwordHash && config.passwordPlain && !config.allowPlain) {
-    problems.push('ALLOW_PLAIN_PASSWORD=false 时不能使用明文 APP_PASSWORD，请改用 APP_PASSWORD_HASH。');
   }
   return problems;
 }

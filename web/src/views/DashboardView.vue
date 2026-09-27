@@ -80,12 +80,12 @@
         </n-grid-item>
       </n-grid>
     </n-spin>
-    <SubscriptionEditModal v-model:show="editVisible" :model="editing" @saved="load" />
-    <ShareModal v-model:show="shareVisible" :item="sharing" @changed="load" />
+    <SubscriptionEditModal v-if="editVisible" v-model:show="editVisible" :model="editing" @saved="load" />
+    <ShareModal v-if="shareVisible" v-model:show="shareVisible" :item="sharing" @changed="load" />
   </div>
 </template>
 <script setup>
-import { onMounted, ref } from 'vue';
+import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   NAlert,
@@ -101,8 +101,8 @@ import {
   NTag,
   useMessage
 } from 'naive-ui';
-import SubscriptionEditModal from '../components/SubscriptionEditModal.vue';
-import ShareModal from '../components/ShareModal.vue';
+const SubscriptionEditModal = defineAsyncComponent(() => import('../components/SubscriptionEditModal.vue'));
+const ShareModal = defineAsyncComponent(() => import('../components/ShareModal.vue'));
 import { api } from '../api.js';
 import { doLogout, session } from '../session.js';
 import { copyText } from '../clipboard.js';

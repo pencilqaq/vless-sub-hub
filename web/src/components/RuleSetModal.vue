@@ -141,7 +141,8 @@ watch(
       description: source.description || '',
       enabled: source.enabled !== false
     });
-  }
+  },
+  { immediate: true }
 );
 async function testFetch() {
   if (!form.url.trim()) {

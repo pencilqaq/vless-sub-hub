@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import LoginView from './views/LoginView.vue';
-import DashboardView from './views/DashboardView.vue';
-import RulesView from './views/RulesView.vue';
 import { refreshSession, session } from './session.js';
+// 路由级懒加载：登录页先加载，控制台与规则管理按需下载各自的 chunk
+const LoginView = () => import('./views/LoginView.vue');
+const DashboardView = () => import('./views/DashboardView.vue');
+const RulesView = () => import('./views/RulesView.vue');
 export const router = createRouter({
   history: createWebHistory(),
   routes: [

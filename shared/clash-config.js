@@ -51,9 +51,6 @@ const CLASH_LOYAL_PROVIDERS = [
   { key: 'applications', file: 'applications.txt', behavior: 'domain', group: '🎯 全球直连' },
   { key: 'lancidr', file: 'lancidr.txt', behavior: 'ipcidr', group: '🎯 全球直连' }
 ];
-const CLASH_LOYAL_RULES = CLASH_LOYAL_PROVIDERS.map((item) => 'RULE-SET,' + item.key + ',' + item.group).concat([
-  'GEOIP,CN,🎯 全球直连'
-]);
 const BM7_BASE = 'https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/';
 const CLASH_BM7_PROVIDERS = [
   ['Advertising', '🛑 广告拦截'],
@@ -76,7 +73,6 @@ const CLASH_BM7_PROVIDERS = [
   ['ChinaMax', '🎯 全球直连'],
   ['Global', '🚀 节点选择']
 ];
-const VALID_PRESETS = ['basic', 'loyalsoldier', 'blackmatrix7', 'custom'];
 /* 预设不再直接参与渲染，只作为"一键导入为规则集"的模板 */
 export const CLASH_PRESET_IMPORTS = {
   basic: {
@@ -151,35 +147,6 @@ export function buildManagedProviders(ruleSets) {
   }
   return out;
 }
-export function buildRuleProviders(preset) {
-  if (preset === 'loyalsoldier') {
-    return CLASH_LOYAL_PROVIDERS.map((item) => ({
-      key: item.key,
-      behavior: item.behavior,
-      url: LOYALSOILDIER_BASE + item.file,
-      interval: 86400
-    }));
-  }
-  if (preset === 'blackmatrix7') {
-    return CLASH_BM7_PROVIDERS.map(([key]) => ({
-      key,
-      behavior: 'classical',
-      url: BM7_BASE + key + '/' + key + '.yaml',
-      interval: 86400
-    }));
-  }
-  return [];
-}
-export function buildRules(preset, customRules) {
-  let rules = [];
-  if (preset === 'basic') rules = CLASH_BASIC_RULES.slice();
-  else if (preset === 'loyalsoldier') rules = CLASH_LOYAL_RULES.slice();
-  else if (preset === 'blackmatrix7') {
-    rules = CLASH_BM7_PROVIDERS.map(([key, group]) => 'RULE-SET,' + key + ',' + group);
-  }
-  for (const line of normalizeRuleLines(customRules, '')) rules.push(line);
-  return rules;
-}
 export function pickFinalGroup(groups, wanted) {
   const names = groups.map((item) => item.name);
   const target = String(wanted || '').trim();
@@ -189,7 +156,6 @@ export function pickFinalGroup(groups, wanted) {
 }
 export function toClashConfig(parsed, links, options) {
   const opt = options || {};
-  const preset = VALID_PRESETS.includes(opt.preset) ? opt.preset : 'custom';
   const rawPort = Number(opt.mixedPort);
   const mixedPort = Number.isFinite(rawPort) && rawPort >= 1 && rawPort <= 65535 ? rawPort : 7890;
   const nodeNames = links.map((item) => item.name);
@@ -209,7 +175,6 @@ export function toClashConfig(parsed, links, options) {
   const lines = [];
   lines.push('# 由 vless-sub-hub 生成的完整 Clash / mihomo 配置（策略组 + 规则集模式）');
   lines.push('# 策略组数量：' + groups.length + '；节点数量：' + links.length + '；默认策略组（MATCH）：' + finalGroup);
-  if (preset !== 'custom') lines.push('# 兼容模式：仍在使用旧的分流预设 ' + preset + '（建议改为在规则管理里导入规则集）');
   lines.push('mixed-port: ' + mixedPort);
   lines.push('allow-lan: false');
   lines.push('bind-address: "*"');
@@ -272,7 +237,7 @@ export function toClashConfig(parsed, links, options) {
     if (item.type === 'url') ruleTexts.push('RULE-SET,' + item.key + ',' + (item.group || finalGroup));
     else ruleTexts.push(...normalizeRuleLines(item.content, item.group));
   }
-  for (const rule of buildRules(preset, opt.customRules)) ruleTexts.push(rule);
+  for (const rule of normalizeRuleLines(opt.customRules, '')) ruleTexts.push(rule);
   for (const rule of ruleTexts) {
     const parts = rule.split(',');
     if (parts.length >= 3 && !knownTargets.has(parts[2])) {
@@ -284,7 +249,7 @@ export function toClashConfig(parsed, links, options) {
     }
   }
   lines.push('  - ' + jsonStr('MATCH,' + finalGroup));
-  const providers = buildManagedProviders(opt.ruleSets).concat(buildRuleProviders(preset));
+  const providers = buildManagedProviders(opt.ruleSets);
   if (providers.length) {
     lines.push('');
     lines.push('rule-providers:');

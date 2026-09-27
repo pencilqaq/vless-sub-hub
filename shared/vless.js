@@ -205,7 +205,6 @@ export function normalizeOptions(sub) {
     nameTemplate: s.nameTemplate || DEFAULT_NAME_TEMPLATE,
     paramOverrides: String(s.paramOverrides || ''),
     clashMode: s.clashMode === 'full' ? 'full' : 'fragment',
-    clashPreset: s.clashPreset || 'basic',
     clashCustomRules: String(s.clashCustomRules || ''),
     clashMixedPort: String(s.clashMixedPort || '7890'),
     useLinePort: s.useLinePort !== false,

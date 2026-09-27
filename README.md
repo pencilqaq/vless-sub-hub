@@ -68,7 +68,7 @@ pnpm run dev                     # 同时启动前后端（端口取自 .env，�
 
 > 规则集的目标策略组可以是自建策略组，也可以直接用内置策略 `DIRECT` / `REJECT` / `PASS`（这三个名称不允许再被创建为策略组）。
 > 采用「策略组 + 规则集」模式：策略组（proxy-groups）与规则集（rule-providers / 内联规则）都在「规则管理」页面维护，
-> 每个规则集指定目标策略组，订阅里选择引用哪些策略组与规则集。旧的内置预设仍兼容，但推荐用「导入预设规则集」把它们变成可编辑的规则集。
+> 每个规则集指定目标策略组，订阅里选择引用哪些策略组与规则集；内置预设通过「导入预设规则集」变成可编辑的规则集。
 
 在订阅编辑弹窗的「Clash / mihomo 订阅」里选择输出方式：
 
@@ -107,6 +107,18 @@ IP-CIDR,1.2.3.0/24,🎯 全球直连,no-resolve
 
 安全方面：服务端拉取链接时会拒绝内网/本机地址（自建规则镜像可在 `.env` 设置 `ALLOW_PRIVATE_RULE_URLS=true` 放开），并限制 15 秒超时与 5MB 体积。
 
+### 生产部署
+
+```bash
+pnpm install        # 与构建在同一台机器时
+pnpm build          # 生成 web/dist（必须，否则 3456 只会提示"前端尚未构建"）
+pnpm start          # 只监听 SERVER_PORT，单进程同时提供页面 / API / 订阅
+```
+
+> `vue` / `naive-ui` / `vue-router` / `qrcode` 只在**构建期**使用，已放在 `devDependencies`；运行时后端只需要 `express`。
+> 想精简服务器依赖可以用：构建机上 `pnpm install && pnpm build`，服务器上 `pnpm install --prod && pnpm start`。
+> 注意 `pnpm verify` 系列自检需要 devDependencies（内部会调用 Vite 构建），不要在 `--prod` 环境里跑。
+
 ## 端口配置
 
 在 `.env` 中分别设置前后端端口：
@@ -119,7 +131,6 @@ SERVER_PORT=           # 后端端口；留空时自动使用 WEB_PORT + 1
 - `pnpm dev` 启动前会校验：缺少 `WEB_PORT` 或端口非法会直接报错并说明原因。
 - `SERVER_PORT` 留空（或删除该行）时后端端口 = `WEB_PORT + 1`，前端 `/api`、`/sub` 代理会自动指向它，不会写死 3000。
 - 生产模式 `pnpm start` 只需要 `SERVER_PORT`；若都没设置则回退到 3000。
-- 兼容说明：旧名 `PORT` 与常见拼写 `SEVER_PORT` 仍会被识别，但启动时会打印提示，建议统一用 `SERVER_PORT`。
 
 ## 订阅地址格式
 
