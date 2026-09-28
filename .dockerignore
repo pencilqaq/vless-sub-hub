@@ -1,0 +1,12 @@
+# 构建上下文里不需要的东西（镜像内的依赖由 Dockerfile 自己安装）
+node_modules
+web/dist
+data
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.log
+docs
+scripts

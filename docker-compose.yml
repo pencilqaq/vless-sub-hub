@@ -1,0 +1,38 @@
+# VLESS 订阅中心 · Docker Compose（镜像基于 node:jod-alpine）
+#
+#   1. copy .env.example .env            # Windows 用 copy，Linux/macOS 用 cp
+#   2. docker compose run --rm app node server/hash-password.js "你的登录密码"
+#      把输出的 APP_PASSWORD_HASH 填进 .env
+#   3. docker compose up -d --build      打开 http://localhost:3456
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vless-sub-hub:latest
+    container_name: vless-sub-hub
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      # 端口只用 SERVER_PORT：显式给值，避免 .env 里留空时后端推导成 WEB_PORT + 1
+      SERVER_PORT: "${SERVER_PORT:-3456}"
+      HOST: "0.0.0.0"
+      DATA_DIR: "/app/data"
+      NODE_ENV: "production"
+    ports:
+      - "${SERVER_PORT:-3456}:${SERVER_PORT:-3456}"
+    volumes:
+      - data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  # 固定卷名，方便备份/恢复；想改用宿主机目录就把上面的 data:/app/data 换成 ./data:/app/data
+  data:
+    name: vless-sub-hub-data

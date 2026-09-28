@@ -48,6 +48,9 @@ vless-sub-hub/
 │     ├─ views/LoginView.vue  views/DashboardView.vue
 │     └─ components/SubscriptionEditModal.vue  components/ShareModal.vue
 ├─ data/                   运行后生成（db.json、.session-secret），请勿提交
+├─ Dockerfile              多阶段镜像构建（基于 node:jod-alpine）
+├─ docker-compose.yml      Docker Compose 部署（单服务 + 数据卷）
+├─ .dockerignore
 ├─ .env.example
 └─ package.json
 ```
@@ -128,6 +131,29 @@ pnpm start          # 只监听 SERVER_PORT，单进程同时提供页面 / API 
 > `vue` / `naive-ui` / `vue-router` / `qrcode` 只在**构建期**使用，已放在 `devDependencies`；运行时后端只需要 `express`。
 > 想精简服务器依赖可以用：构建机上 `pnpm install && pnpm build`，服务器上 `pnpm install --prod && pnpm start`。
 > 注意 `pnpm verify` 系列自检需要 devDependencies（内部会调用 Vite 构建），不要在 `--prod` 环境里跑。
+
+#### Docker Compose 部署
+
+镜像基于官方 `node:jod-alpine`（Node.js 22 LTS），两阶段构建：构建阶段装全量依赖并 `pnpm run build`，
+运行阶段只装生产依赖（`express`），并以非 root 的 `node` 用户启动。
+
+```bash
+copy .env.example .env                                  # Linux/macOS：cp .env.example .env
+docker compose run --rm app node server/hash-password.js "你的登录密码"
+# 把输出的 APP_PASSWORD_HASH 填进 .env，按需修改 SERVER_PORT / PUBLIC_BASE_URL 等
+docker compose up -d --build                            # 打开 http://localhost:3456
+docker compose logs -f                                  # 看启动日志（配置报错会直接打印原因）
+```
+
+- 端口：宿主机端口与容器端口都取 `.env` 里的 `SERVER_PORT`，留空则回退 3456。Compose 会把这个值显式传进容器，
+  不会出现「留空 → 后端改用 `WEB_PORT + 1`」导致端口对不上的情况。
+- 数据：`db.json` 与会话密钥保存在数据卷 `vless-sub-hub-data` 的 `/app/data`，容器重建不丢。
+  备份 `docker compose cp app:/app/data/db.json ./db-backup.json`，恢复 `docker compose cp ./db-backup.json app:/app/data/db.json`。
+- 想直接看到宿主机的 `./data` 目录：把 compose 里 `data:/app/data` 改成 `./data:/app/data`；
+  Linux 上先执行 `mkdir -p data && sudo chown 1000:1000 data`（容器内进程以 uid 1000 运行）。
+- 放在 nginx/openresty 反代后面时，容器监听 `0.0.0.0:3456` 即可，另外记得
+  `PUBLIC_BASE_URL=https://你的域名`、`COOKIE_SECURE=true`、`TRUST_PROXY=true`。
+- 要锁死基础镜像版本，把 Dockerfile 里的 `FROM node:jod-alpine` 换成带 digest 的写法（文件顶部注释已给出示例）。
 
 ## 端口配置
 
@@ -221,6 +247,7 @@ server {
 
 所有订阅保存在 `data/db.json`，原子写入；会话密钥在 `data/.session-secret`。
 备份直接复制 `data/` 目录即可，注意该目录不要提交到公开仓库。
+Docker 部署时数据在数据卷 `vless-sub-hub-data` 里，备份方式见上一节的 `docker compose cp` 命令。
 
 ## 开发约定（demo 阶段）
 
