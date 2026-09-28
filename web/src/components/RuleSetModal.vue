@@ -3,7 +3,7 @@
     :show="show"
     preset="card"
     :title="model && model.id ? '编辑规则集' : '新建规则集'"
-    :style="{ width: '760px', maxWidth: '96vw' }"
+    :style="{ width: '880px', maxWidth: '96vw' }"
     :mask-closable="false"
     @update:show="(value) => emit('update:show', value)"
   >
@@ -12,7 +12,7 @@
         <n-form-item label="名称">
           <n-input v-model:value="form.name" placeholder="例如：我的直连规则" maxlength="60" />
         </n-form-item>
-        <n-form-item label="目标策略组（规则命中的流量走哪里）">
+        <n-form-item :label="targetGroupLabel">
           <n-select v-model:value="form.group" :options="groupOptions" placeholder="请先在策略组标签页创建" />
         </n-form-item>
       </div>
@@ -39,31 +39,52 @@
             <n-input v-model:value="form.interval" placeholder="86400" />
           </n-form-item>
         </div>
-        <n-space align="center" style="margin-bottom: 10px">
-          <n-button size="small" :loading="testing" @click="testFetch">测试链接</n-button>
-          <span class="muted small">服务端会实际拉取一次，确认可达并统计行数</span>
-        </n-space>
-        <n-alert
-          v-if="testResult"
-          :type="testResult.ok ? 'success' : 'error'"
-          :show-icon="false"
-          style="margin-bottom: 12px; white-space: pre-wrap"
-        >
-          {{ testResult.text }}
-        </n-alert>
+        <p class="muted small" style="margin: 0 0 14px">
+          服务端不会拉取这个文件，也不会缓存内容：`rule-providers` 只把链接写进生成的配置，由客户端按上面的更新间隔自己拉取。
+        </p>
       </template>
       <template v-else>
-        <n-form-item label="规则内容（每行一条）">
-          <n-input
-            v-model:value="form.content"
-            type="textarea"
-            :rows="10"
-            placeholder="DOMAIN-SUFFIX,example.com&#10;DOMAIN-KEYWORD,google&#10;IP-CIDR,1.2.3.0/24,no-resolve&#10;&#10;只写两段时，会自动补上上面的目标策略组"
-          />
-        </n-form-item>
-        <p class="muted small" style="margin: -6px 0 10px">
-          已经写全的规则（如 <code>DOMAIN-SUFFIX,a.com,DIRECT</code>）会原样使用；只写两段的会补上目标策略组。
-        </p>
+        <div class="rule-editor">
+          <div class="rule-row rule-row-head small">
+            <span>匹配方式</span>
+            <span>匹配内容</span>
+            <span>命中后策略组</span>
+            <span></span>
+          </div>
+          <div v-for="(row, index) in rows" :key="row.uid" class="rule-row">
+            <n-select
+              v-model:value="row.type"
+              :options="typeOptions"
+              size="small"
+              filterable
+              tag
+              placeholder="匹配方式"
+            />
+            <n-input
+              v-model:value="row.value"
+              size="small"
+              :placeholder="valueHint(row.type)"
+              :disabled="isMatchRow(row.type)"
+            />
+            <n-select
+              v-model:value="row.target"
+              :options="groupOptions"
+              size="small"
+              clearable
+              :placeholder="defaultTargetHint"
+            />
+            <div class="rule-row-actions">
+              <n-checkbox v-if="supportsNoResolve(row.type)" v-model:checked="row.noResolve" size="small">
+                no-resolve
+              </n-checkbox>
+              <n-button size="tiny" quaternary type="error" @click="removeRow(index)">删除</n-button>
+            </div>
+          </div>
+        </div>
+        <n-space align="center" style="margin: 10px 0 14px" :size="10">
+          <n-button size="small" @click="addRow">添加规则</n-button>
+          <span class="muted small">「命中后策略组」留空表示走上面的默认目标；MATCH 兜底行必须指定目标。</span>
+        </n-space>
       </template>
       <n-form-item label="备注（可选）">
         <n-input v-model:value="form.description" placeholder="例如：来自 xxx 仓库，只影响广告域名" maxlength="200" />
@@ -79,9 +100,8 @@
   </n-modal>
 </template>
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import {
-  NAlert,
   NButton,
   NCheckbox,
   NForm,
@@ -94,6 +114,7 @@ import {
   NSpace,
   useMessage
 } from 'naive-ui';
+import { RULE_TYPES, formatRuleLines, parseRuleLines, ruleTypeMeta, supportsNoResolve } from '@shared/rule-lines.js';
 import { api } from '../api.js';
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -103,13 +124,12 @@ const props = defineProps({
 const emit = defineEmits(['update:show', 'saved']);
 const message = useMessage();
 const saving = ref(false);
-const testing = ref(false);
-const testResult = ref(null);
 const behaviorOptions = [
   { label: 'classical（混合规则，blackmatrix7 常用）', value: 'classical' },
   { label: 'domain（纯域名规则）', value: 'domain' },
   { label: 'ipcidr（纯 IP 段规则）', value: 'ipcidr' }
 ];
+const typeOptions = RULE_TYPES.map((item) => ({ label: item.label, value: item.value }));
 function blank() {
   return {
     name: '',
@@ -124,12 +144,41 @@ function blank() {
   };
 }
 const form = reactive(blank());
+let rowSeq = 0;
+function newRow(init) {
+  const source = init || {};
+  const extra = Array.isArray(source.extra) ? source.extra : [];
+  return {
+    uid: ++rowSeq,
+    type: source.type || 'DOMAIN-SUFFIX',
+    value: source.value || '',
+    target: source.target || '',
+    noResolve: extra.includes('no-resolve')
+  };
+}
+const rows = ref([]);
+const targetGroupLabel = computed(() =>
+  form.type === 'url' ? '目标策略组（整包命中后走这里）' : '默认目标策略组（规则行未单独指定时使用）'
+);
+const defaultTargetHint = computed(() => (form.group ? '默认：' + form.group : '用规则集目标'));
+function isMatchRow(type) {
+  return String(type || '').trim().toUpperCase() === 'MATCH';
+}
+function valueHint(type) {
+  const meta = ruleTypeMeta(type);
+  return (meta && meta.hint) || '匹配内容';
+}
+function addRow() {
+  rows.value.push(newRow({ type: 'DOMAIN-SUFFIX' }));
+}
+function removeRow(index) {
+  rows.value.splice(index, 1);
+}
 watch(
   () => props.show,
   (visible) => {
     if (!visible) return;
     const source = props.model || {};
-    testResult.value = null;
     Object.assign(form, blank(), {
       name: source.name || '',
       type: source.type === 'inline' ? 'inline' : 'url',
@@ -141,28 +190,17 @@ watch(
       description: source.description || '',
       enabled: source.enabled !== false
     });
+    rows.value = parseRuleLines(form.content).map((row) => newRow(row));
+    if (form.type === 'inline' && !rows.value.length) rows.value.push(newRow({ type: 'DOMAIN-SUFFIX' }));
   },
   { immediate: true }
 );
-async function testFetch() {
-  if (!form.url.trim()) {
-    message.warning('请先填写规则文件链接');
-    return;
+watch(
+  () => form.type,
+  (value) => {
+    if (value === 'inline' && !rows.value.length) rows.value.push(newRow({ type: 'DOMAIN-SUFFIX' }));
   }
-  testing.value = true;
-  testResult.value = null;
-  try {
-    const data = await api.testRuleSet({ url: form.url });
-    testResult.value = {
-      ok: true,
-      text: '拉取成功：' + data.lines + ' 行 / ' + data.bytes + ' 字节\n示例：\n' + (data.sample || []).join('\n')
-    };
-  } catch (err) {
-    testResult.value = { ok: false, text: (err && err.message) || '拉取失败' };
-  } finally {
-    testing.value = false;
-  }
-}
+);
 async function save() {
   if (!form.name.trim()) {
     message.error('请填写名称');
@@ -172,17 +210,46 @@ async function save() {
     message.error('请选择目标策略组');
     return;
   }
-  if (form.type === 'url' && !form.url.trim()) {
-    message.error('请填写规则文件链接');
-    return;
-  }
-  if (form.type === 'inline' && !form.content.trim()) {
-    message.error('请填写规则内容');
-    return;
+  let content = form.content;
+  if (form.type === 'url') {
+    if (!form.url.trim()) {
+      message.error('请填写规则文件链接');
+      return;
+    }
+  } else {
+    const cleaned = rows.value
+      .map((row) => ({
+        type: String(row.type || '').trim(),
+        value: String(row.value || '').trim(),
+        target: String(row.target || '').trim(),
+        noResolve: Boolean(row.noResolve)
+      }))
+      .filter((row) => row.type);
+    if (!cleaned.length) {
+      message.error('至少添加一条规则');
+      return;
+    }
+    const missing = cleaned.findIndex((row) => !isMatchRow(row.type) && !row.value);
+    if (missing >= 0) {
+      message.error('第 ' + (missing + 1) + ' 条规则缺少匹配内容');
+      return;
+    }
+    content = formatRuleLines(
+      cleaned.map((row) => ({
+        type: row.type,
+        value: row.value,
+        target: row.target || (isMatchRow(row.type) ? form.group : ''),
+        extra: row.noResolve ? ['no-resolve'] : []
+      }))
+    );
+    if (!content.trim()) {
+      message.error('至少添加一条规则');
+      return;
+    }
   }
   saving.value = true;
   try {
-    const payload = Object.assign({}, form);
+    const payload = Object.assign({}, form, { content });
     if (props.model && props.model.id) await api.updateRuleSet(props.model.id, payload);
     else await api.createRuleSet(payload);
     message.success('已保存');

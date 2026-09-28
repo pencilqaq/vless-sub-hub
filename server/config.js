@@ -65,7 +65,6 @@ export const config = {
   trustProxy: String(process.env.TRUST_PROXY || '').trim(),
   publicBaseUrl: String(process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, ''),
   allowedIps: String(process.env.ALLOWED_IPS || '').split(',').map((x) => x.trim()).filter(Boolean),
-  allowPrivateRuleUrls: boolEnv('ALLOW_PRIVATE_RULE_URLS', false),
   webDist: path.join(rootDir, 'web', 'dist'),
   dataDir
 };

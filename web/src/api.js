@@ -97,9 +97,6 @@ export const api = {
   removeRuleSet(id) {
     return request('DELETE', '/api/rule-sets/' + encodeURIComponent(id));
   },
-  testRuleSet(payload) {
-    return request('POST', '/api/rule-sets/test', payload);
-  },
   async exportText(id, format) {
     const res = await fetch('/api/subscriptions/' + encodeURIComponent(id) + '/export?format=' + encodeURIComponent(format), {
       credentials: 'include'

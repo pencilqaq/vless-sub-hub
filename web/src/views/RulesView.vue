@@ -73,7 +73,7 @@
             </n-dropdown>
             <n-button :loading="loading" @click="loadAll">刷新</n-button>
           </n-space>
-          <span class="muted small">规则集需要指定目标策略组</span>
+          <span class="muted small">每条规则 = 匹配方式 + 匹配内容 + 命中后的策略组</span>
         </div>
         <n-spin :show="loading">
           <n-empty v-if="!items.length && !loading" description="还没有规则集，可以新建或从预设导入" style="padding: 60px 0" />
@@ -93,7 +93,7 @@
                 </template>
                 <div class="meta">
                   <div>
-                    目标策略组：
+                    {{ item.type === 'url' ? '目标策略组：' : '默认目标策略组：' }}
                     <span class="mono">{{ item.group }}</span>
                     <n-tag v-if="!knownTargets.includes(item.group)" size="tiny" type="error" :bordered="false" style="margin-left: 6px">
                       策略组不存在
@@ -103,7 +103,9 @@
                     </n-tag>
                   </div>
                   <div v-if="item.type === 'url'">behavior：{{ item.behavior }} · 每 {{ Math.round((item.interval || 86400) / 3600) }} 小时更新</div>
-                  <div v-else>规则条数：{{ countLines(item.content) }}</div>
+                  <div v-else>规则条数：{{ ruleRows(item).length }}</div>
+                  <RuleTable v-if="item.type === 'url'" :rows="ruleSummaryRows(item)" />
+                  <RuleTable v-else :rows="ruleRows(item)" :fallback-group="item.group" :max-rows="6" />
                   <div class="muted small ellipsis" :title="item.url || item.description">{{ item.url || item.description || '—' }}</div>
                 </div>
                 <template #action>
@@ -175,6 +177,8 @@ import {
   useMessage
 } from 'naive-ui';
 import { NODES_PLACEHOLDER, SPECIAL_PROXIES } from '@shared/clash-config.js';
+import { parseRuleLines } from '@shared/rule-lines.js';
+import RuleTable from '../components/RuleTable.vue';
 const RuleSetModal = defineAsyncComponent(() => import('../components/RuleSetModal.vue'));
 const ProxyGroupModal = defineAsyncComponent(() => import('../components/ProxyGroupModal.vue'));
 import { api } from '../api.js';
@@ -203,11 +207,17 @@ const groupOptions = computed(() => {
   for (const name of SPECIAL_PROXIES) options.push({ label: name, value: name });
   return options;
 });
-function countLines(text) {
-  return String(text || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#')).length;
+const ruleRowsMap = computed(() => {
+  const map = new Map();
+  for (const item of items.value) map.set(item.id, parseRuleLines(item && item.content));
+  return map;
+});
+function ruleRows(item) {
+  return ruleRowsMap.value.get(item && item.id) || [];
+}
+/* 远程规则包在生成的配置里就是一行 RULE-SET，目标策略组由规则集本身决定 */
+function ruleSummaryRows(item) {
+  return [{ type: 'RULE-SET', value: item.key, target: item.group, extra: [] }];
 }
 function describeMembers(item) {
   const members = Array.isArray(item.members) ? item.members : [];

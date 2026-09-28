@@ -110,15 +110,19 @@ IP-CIDR,1.2.3.0/24,🎯 全球直连,no-resolve
 
 「规则管理」页面可以维护多个规则集，供任意订阅引用：
 
-- **远程链接**：填一个 mihomo rule-provider 的 URL，选择 `behavior`（classical / domain / ipcidr）与更新间隔；生成配置时写入 `rule-providers`，并用 `RULE-SET` 引用。页面上的「测试链接」会让服务端实际拉取一次，确认可达并给出行数与示例。
-- **自己创建**：直接在页面里写规则，每行一条；只写两段（如 `DOMAIN-SUFFIX,example.com`）会自动补上该规则集的目标策略组，写全的（`...,DIRECT`）原样保留。
+- **远程链接**：填一个 mihomo rule-provider 的 URL，选择 `behavior`（classical / domain / ipcidr）与更新间隔；生成配置时写入 `rule-providers`，并用 `RULE-SET,<规则集 key>,<目标策略组>` 引用。卡片上会直接显示这行三段式。**服务端不拉取、不缓存也不预览这个文件**，规则内容完全由客户端按更新间隔自己拉取。
+- **自己创建**：用三段式逐条编辑——**匹配方式**、**匹配内容**、**命中后走哪个策略组**。匹配方式下拉可选 `DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` / `GEOSITE` / `GEOIP` / `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR` / `IP-ASN` / `DST-PORT` / `SRC-PORT` / `PROCESS-NAME` / `PROCESS-PATH` / `RULE-SET` / `MATCH`，也支持自己输入；IP 类规则可勾 `no-resolve`。
+
+规则行的「命中后策略组」留空时，表示走规则集的默认目标策略组（生成的配置里就是两段式，由规则集补全）；`MATCH` 兜底行必须显式指定目标。
+导入预设（含基础分流）后的规则同样是三段式显示，所以每条规则走哪个组一目了然，改走向直接改该行第三段即可。
+列表页里每条规则集都会用同款表格展示前 6 条规则，其余折叠成「还有 N 条未显示」。
 
 在订阅编辑页的「引用规则集」里多选即可，顺序即优先级，且**先于**预设规则生效。
 
 规则管理页右上角支持 **导出配置 / 导入配置**（JSON）：导出只包含策略组与规则集，不含订阅与分享令牌；
 导入时可选"跳过同名项"或"覆盖同名项"，导出文件也可以直接手写或分享给朋友。
 
-安全方面：服务端拉取链接时会拒绝内网/本机地址（自建规则镜像可在 `.env` 设置 `ALLOW_PRIVATE_RULE_URLS=true` 放开），并限制 15 秒超时与 5MB 体积。
+安全方面：服务端只把 URL 原样写进生成的配置，自己不发起任何请求，所以内网地址、自建规则镜像都能直接用，服务器也不需要出网。
 
 ### 生产部署
 
@@ -265,4 +269,5 @@ Docker 部署时数据在数据卷 `vless-sub-hub-data` 里，备份方式见上
 - 分享地址是 `http://内网IP` 之类：设置 `PUBLIC_BASE_URL=https://sub.example.com`。
 - 登录后立刻掉线：检查 `COOKIE_SECURE=true` 时是否用 HTTPS 访问。
 - 前端打不开：生产模式需要先 `pnpm run build`，否则 `pnpm start` 只会提示未构建。
+- 改了前端代码但页面没变化：`pnpm start` 服务的是构建产物 `web/dist`，不是源码；重新执行 `pnpm run build` 后在浏览器里强制刷新（Ctrl+F5）即可。开发时用 `pnpm dev` 才有热更新。
 - 开发模式报 `http proxy error / ECONNREFUSED 127.0.0.1:3000`：说明后端没起来。开发代理会自动读取 `.env`：`WEB_PORT` 为前端端口（必填），`SERVER_PORT` 为后端端口（留空则取 `WEB_PORT + 1`）；若提示 `EADDRINUSE`，说明该端口已被别的进程占用，换一个 `SERVER_PORT` 或先停掉占用进程。

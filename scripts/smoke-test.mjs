@@ -155,7 +155,62 @@ try {
   const uaRes = await fetch(BASE + '/sub/' + token, { headers: { 'User-Agent': 'clash-verge/1.7.0' } });
   const uaText = await uaRes.text();
   check('按 User-Agent 自动识别 Clash', uaText.includes('proxies:'));
-  section('6. 令牌重置与停用');
+  section('6. 规则集：三段式');
+  const ruleSet = await fetch(BASE + '/api/rule-sets', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      name: '三段式测试',
+      type: 'inline',
+      group: '🚀 节点选择',
+      content: [
+        'DOMAIN-SUFFIX,example.com',
+        'DOMAIN-KEYWORD,google,DIRECT',
+        'IP-CIDR,10.0.0.0/8,🎯 全球直连,no-resolve',
+        'MATCH,DIRECT'
+      ].join('\n')
+    })
+  });
+  const ruleSetData = await ruleSet.json();
+  check('创建本地规则集返回 201', ruleSet.status === 201, 'status=' + ruleSet.status);
+  check('规则内容原样保存（含目标与 no-resolve）', String(ruleSetData.content || '').includes('IP-CIDR,10.0.0.0/8,🎯 全球直连,no-resolve'));
+  check('未写目标的规则行保持两段式', String(ruleSetData.content || '').includes('DOMAIN-SUFFIX,example.com'));
+  const preset = await fetch(BASE + '/api/rule-sets/import-preset', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ preset: 'basic' })
+  });
+  const presetData = await preset.json();
+  check('导入基础分流预设', preset.status === 200 && presetData.items.length === 1, 'items=' + ((presetData.items || []).length));
+  const remoteRuleSet = await fetch(BASE + '/api/rule-sets', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      name: '远程规则集',
+      type: 'url',
+      group: '🚀 节点选择',
+      behavior: 'domain',
+      url: 'https://example.com/rules.txt',
+      interval: '86400'
+    })
+  });
+  const remoteRuleSetData = await remoteRuleSet.json();
+  check('创建远程规则集返回 201（服务端不拉取文件）', remoteRuleSet.status === 201, 'status=' + remoteRuleSet.status);
+  check('远程规则集保留链接与 behavior', remoteRuleSetData.url === 'https://example.com/rules.txt' && remoteRuleSetData.behavior === 'domain');
+  const updatedRuleSet = await fetch(BASE + '/api/rule-sets/' + ruleSetData.id, {
+    method: 'PUT',
+    headers: authHeaders,
+    body: JSON.stringify(Object.assign({}, ruleSetData, { content: 'GEOIP,CN,🎯 全球直连' }))
+  });
+  check('更新规则集成功', updatedRuleSet.status === 200);
+  const listedRuleSets = await fetch(BASE + '/api/rule-sets', { headers: { Cookie: cookie } });
+  const listedRuleSetData = await listedRuleSets.json();
+  check('规则集列表返回 3 条', listedRuleSetData.items.length === 3, 'items=' + listedRuleSetData.items.length);
+  const removedRuleSet = await fetch(BASE + '/api/rule-sets/' + ruleSetData.id, { method: 'DELETE', headers: authHeaders });
+  check('删除规则集成功', removedRuleSet.status === 200);
+  const removedRemote = await fetch(BASE + '/api/rule-sets/' + remoteRuleSetData.id, { method: 'DELETE', headers: authHeaders });
+  check('删除远程规则集成功', removedRemote.status === 200);
+  section('7. 令牌重置与停用');
   const rotated = await fetch(BASE + '/api/subscriptions/' + sub.id + '/rotate', { method: 'POST', headers: authHeaders });
   const rotatedData = await rotated.json();
   check('重置令牌成功', rotated.status === 200 && rotatedData.shareToken !== token);

@@ -117,6 +117,60 @@ body {
 .two-col > * {
   flex: 1 1 220px;
 }
+.rule-table-wrap {
+  width: 100%;
+}
+.rule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.rule-table th,
+.rule-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rule-table th {
+  color: #8b98a5;
+  font-weight: 500;
+}
+.rule-table th:first-child,
+.rule-table td:first-child {
+  width: 34%;
+}
+.rule-table th:last-child,
+.rule-table td:last-child {
+  width: 30%;
+}
+.rule-editor {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rule-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 200px auto;
+  gap: 8px;
+  align-items: center;
+}
+.rule-row-head {
+  color: #8b98a5;
+}
+.rule-row-head > span {
+  padding-left: 2px;
+}
+.rule-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .side-title {
   font-weight: 600;
   margin-bottom: 10px;
@@ -182,6 +236,12 @@ body {
 @media (max-width: 640px) {
   .page {
     padding: 14px 12px 50px;
+  }
+  .rule-row {
+    grid-template-columns: 1fr;
+  }
+  .rule-row-head {
+    display: none;
   }
   .share-right {
     flex: 1 1 auto;

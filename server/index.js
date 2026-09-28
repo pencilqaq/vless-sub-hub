@@ -239,57 +239,6 @@ function sanitizeRuleSet(body) {
     enabled: source.enabled !== false
   };
 }
-function isPrivateRuleHost(hostname) {
-  const host = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
-  if (!host) return true;
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
-    return true;
-  }
-  if (host.includes(':')) return true;
-  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-  if (!match) return false;
-  const a = Number(match[1]);
-  const b = Number(match[2]);
-  if (a === 0 || a === 10 || a === 127) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true;
-  return false;
-}
-async function fetchRuleFile(rawUrl) {
-  let target;
-  try {
-    target = new URL(String(rawUrl || ''));
-  } catch (err) {
-    throw new Error('链接格式不正确');
-  }
-  if (target.protocol !== 'http:' && target.protocol !== 'https:') throw new Error('只支持 http/https 链接');
-  if (!config.allowPrivateRuleUrls && isPrivateRuleHost(target.hostname)) {
-    throw new Error('出于安全考虑禁止访问内网地址（自建规则源可在 .env 设置 ALLOW_PRIVATE_RULE_URLS=true）');
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const response = await fetch(target, {
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: { 'User-Agent': 'vless-sub-hub/1.0 (clash rule fetch)' }
-    });
-    if (!response.ok) throw new Error('目标返回 HTTP ' + response.status);
-    if (!config.allowPrivateRuleUrls && isPrivateRuleHost(new URL(response.url).hostname)) {
-      throw new Error('重定向到了内网地址，已拒绝');
-    }
-    const text = await response.text();
-    if (text.length > 5 * 1024 * 1024) throw new Error('规则文件超过 5MB，已拒绝');
-    return text;
-  } catch (err) {
-    if (err && err.name === 'AbortError') throw new Error('拉取超时（15 秒）');
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 function resolveRuleSets(sub) {
   const ids = Array.isArray(sub && sub.clashRuleSetIds) ? sub.clashRuleSetIds : [];
   if (!ids.length) return [];
@@ -449,18 +398,6 @@ app.put('/api/rule-sets/:id', auth.requireAuth, (req, res) => {
 app.delete('/api/rule-sets/:id', auth.requireAuth, (req, res) => {
   if (!store.removeRuleSet(req.params.id)) return res.status(404).json({ error: '规则集不存在' });
   res.json({ ok: true });
-});
-app.post('/api/rule-sets/test', auth.requireAuth, async (req, res) => {
-  try {
-    const text = await fetchRuleFile((req.body && req.body.url) || '');
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith('#'));
-    res.json({ ok: true, bytes: Buffer.byteLength(text, 'utf8'), lines: lines.length, sample: lines.slice(0, 5) });
-  } catch (err) {
-    res.status(400).json({ error: (err && err.message) || '拉取失败' });
-  }
 });
 app.get('/api/subscriptions', auth.requireAuth, (req, res) => {
   res.json({ items: store.list().map((item) => toView(item, req)) });
